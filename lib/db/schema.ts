@@ -38,6 +38,9 @@ export const sessions = pgTable('sessions', {
   createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
     .notNull()
     .default(sql`now()`),
+  // Stamped by /api/cron/reminders after a successful fanout so the next cron
+  // tick skips this session. Nullable until the 4-hour reminder has been sent.
+  reminderSentAt: timestamp('reminder_sent_at', { withTimezone: true, mode: 'date' }),
 });
 
 export const courts = pgTable(
@@ -127,6 +130,26 @@ export const events = pgTable(
   }),
 );
 
+/**
+ * Web Push subscriptions, keyed by the same opaque device_id our identity
+ * uses elsewhere. Endpoints are unique across devices (the push service
+ * mints them), but device_id is the primary key so a re-subscription from
+ * the same browser cleanly upserts.
+ */
+export const pushSubscriptions = pgTable('push_subscriptions', {
+  deviceId: text('device_id').primaryKey(),
+  endpoint: text('endpoint').notNull().unique(),
+  p256dh: text('p256dh').notNull(),
+  auth: text('auth').notNull(),
+  userAgent: text('user_agent'),
+  createdAt: timestamp('created_at', { withTimezone: true, mode: 'date' })
+    .notNull()
+    .default(sql`now()`),
+  updatedAt: timestamp('updated_at', { withTimezone: true, mode: 'date' })
+    .notNull()
+    .default(sql`now()`),
+});
+
 export type SessionRow = typeof sessions.$inferSelect;
 export type SessionInsert = typeof sessions.$inferInsert;
 
@@ -138,3 +161,6 @@ export type SlotInsert = typeof slots.$inferInsert;
 
 export type EventRow = typeof events.$inferSelect;
 export type EventInsert = typeof events.$inferInsert;
+
+export type PushSubscriptionRow = typeof pushSubscriptions.$inferSelect;
+export type PushSubscriptionInsert = typeof pushSubscriptions.$inferInsert;

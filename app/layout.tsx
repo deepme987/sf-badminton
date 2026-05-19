@@ -13,9 +13,26 @@ const inter = Inter({
   variable: '--font-inter',
 });
 
+/**
+ * Resolve the canonical site URL for absolute metadata.
+ *
+ * Order of precedence:
+ *  1. NEXT_PUBLIC_SITE_URL — set by the deployer when a custom domain exists
+ *  2. VERCEL_PROJECT_PRODUCTION_URL — Vercel's stable production alias
+ *     (e.g. sf-badminton.vercel.app), available in Next 14.2+
+ *  3. VERCEL_URL — per-deploy preview URL (e.g. sf-badminton-abc.vercel.app)
+ *  4. localhost fallback for dev
+ *
+ * Used as `metadataBase` so relative OG image URLs resolve to absolute https
+ * URLs that crawlers (WhatsApp, iMessage, Twitter, etc.) can actually fetch.
+ */
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'http://localhost:3000');
+  (process.env.VERCEL_PROJECT_PRODUCTION_URL
+    ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
+    : process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
+      : 'http://localhost:3000');
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
@@ -34,9 +51,31 @@ export const metadata: Metadata = {
   // Favicon, icon, and apple-icon are auto-routed from app/favicon.ico,
   // app/icon.png, and app/apple-icon.png — no need to declare them here.
   openGraph: {
-    title: 'SFB',
+    title: 'SF Badminton',
     description: 'Who is playing this week.',
+    url: siteUrl,
+    siteName: 'SF Badminton',
     type: 'website',
+    locale: 'en_US',
+    // Explicitly reference the auto-routed app/opengraph-image.tsx so the
+    // <meta property="og:image"> tag is always emitted, even when other
+    // metadata fields override the page-level defaults. Crawlers without
+    // JS won't follow Next's auto-attached image — being explicit is
+    // belt-and-suspenders.
+    images: [
+      {
+        url: '/opengraph-image',
+        width: 1200,
+        height: 630,
+        alt: 'SF Badminton — who is playing this week',
+      },
+    ],
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'SF Badminton',
+    description: 'Who is playing this week.',
+    images: ['/opengraph-image'],
   },
 };
 

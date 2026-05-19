@@ -179,3 +179,63 @@ async function cacheFirst(req) {
     return new Response('Offline', { status: 503, statusText: 'Offline' });
   }
 }
+
+// ─── Web Push ─────────────────────────────────────────────────────────────
+//
+// Two notification types ship today:
+//   1. "New SFB session"  — fanout to every subscriber on session create.
+//   2. "In 4 hours"        — fanout to confirmed slot owners 4h before start.
+// The payload arrives as JSON (`{ title, body, url, tag? }`). We keep the
+// handler tolerant of malformed payloads so a bad publish doesn't surface
+// as a no-op silent push and trigger Chrome's "this site sent a notification
+// you can't see" warning.
+self.addEventListener('push', (event) => {
+  let payload = { title: 'SF Badminton', body: '', url: '/' };
+  try {
+    if (event.data) {
+      payload = { ...payload, ...event.data.json() };
+    }
+  } catch {
+    // Malformed JSON — keep the defaults.
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: '/icon-512.png',
+      badge: '/icon-512.png',
+      tag: payload.tag,
+      data: { url: payload.url },
+    }),
+  );
+});
+
+// Focus an existing tab if any, otherwise open a fresh window. Some browsers
+// (Safari, older Firefox) restrict `client.navigate` cross-origin — we swallow
+// that error and fall back to just focusing the existing tab.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  const url = (event.notification.data && event.notification.data.url) || '/';
+  event.waitUntil(
+    (async () => {
+      const allClients = await self.clients.matchAll({
+        type: 'window',
+        includeUncontrolled: true,
+      });
+      for (const client of allClients) {
+        if ('focus' in client) {
+          await client.focus();
+          if ('navigate' in client) {
+            try {
+              await client.navigate(url);
+            } catch {
+              // ignore — browser disallowed cross-origin navigate
+            }
+          }
+          return;
+        }
+      }
+      await self.clients.openWindow(url);
+    })(),
+  );
+});

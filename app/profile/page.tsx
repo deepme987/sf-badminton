@@ -4,6 +4,8 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useIdentity } from '@/lib/client/use-identity';
 import { useTheme } from '@/lib/client/use-theme';
+import { usePush } from '@/lib/client/use-push';
+import { needsIosInstallPrompt } from '@/lib/client/push';
 import type { ThemeMode } from '@/lib/client/theme';
 import { Button } from '@/app/_components/button';
 import { Modal } from '@/app/_components/modal';
@@ -16,12 +18,18 @@ export default function ProfilePage() {
   const { identity, isReady, setName, setHandles, clear } = useIdentity();
   const toast = useToast();
   const { mode, setMode, isReady: themeReady } = useTheme();
-
+  const push = usePush();
   const [name, setNameLocal] = useState('');
   const [venmo, setVenmo] = useState('');
   const [zelle, setZelle] = useState('');
   const [confirmClear, setConfirmClear] = useState(false);
   const [nameError, setNameError] = useState<string | null>(null);
+  // iOS install hint resolves after hydration (checks display-mode + UA).
+  // Rendered conditionally below the notification toggle.
+  const [iosInstallHint, setIosInstallHint] = useState(false);
+  useEffect(() => {
+    setIosInstallHint(needsIosInstallPrompt());
+  }, []);
 
   useEffect(() => {
     if (!isReady) return;
@@ -175,6 +183,49 @@ export default function ProfilePage() {
             );
           })}
         </div>
+      </section>
+
+      <hr className="border-rule my-6" />
+
+      <section className="mb-8">
+        <h2 className="t-label mb-3">Notifications</h2>
+        {!push.isReady ? (
+          <p className="t-small text-ink-faint">Checking…</p>
+        ) : push.status === 'unsupported' ? (
+          <p className="t-small text-ink-faint">
+            Your browser doesn&apos;t support push notifications.
+          </p>
+        ) : iosInstallHint ? (
+          <p className="t-small text-ink-faint">
+            Install SFB to your home screen first: tap{' '}
+            <span className="text-ink font-medium">Share</span> →{' '}
+            <span className="text-ink font-medium">Add to Home Screen</span>. Then open
+            SFB from there to enable notifications.
+          </p>
+        ) : push.status === 'denied' ? (
+          <p className="t-small text-ink-faint">
+            Notifications are blocked. Re-enable in your browser or OS settings.
+          </p>
+        ) : (
+          <div className="flex items-center gap-3">
+            <Button
+              variant={push.status === 'subscribed' ? 'ghost' : 'primary'}
+              disabled={!identity}
+              onClick={() => {
+                if (!identity) return;
+                if (push.status === 'subscribed') void push.disable(identity.deviceId);
+                else void push.enable(identity.deviceId);
+              }}
+            >
+              {push.status === 'subscribed' ? 'Turn off' : 'Turn on'}
+            </Button>
+            <p className="t-small text-ink-soft">
+              {push.status === 'subscribed'
+                ? 'You’ll get a ping for new sessions and a 4-hour reminder if you’re on the roster.'
+                : 'Get a ping for new sessions and 4-hour reminders.'}
+            </p>
+          </div>
+        )}
       </section>
 
       <hr className="border-rule my-6" />

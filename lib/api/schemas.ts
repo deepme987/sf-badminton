@@ -84,3 +84,20 @@ export const addPlusOneBody = z
   })
   .strict();
 export type AddPlusOneBody = z.infer<typeof addPlusOneBody>;
+
+/**
+ * PushSubscriptionJSON-shaped body from the browser's PushManager.
+ * `endpoint` is the URL the push service mints; `keys.p256dh` + `keys.auth`
+ * are the ECDH and HMAC secrets used to encrypt the payload.
+ */
+export const pushSubscribeBody = z
+  .object({
+    endpoint: z.string().url().max(2000),
+    keys: z.object({
+      p256dh: z.string().min(1).max(200),
+      auth: z.string().min(1).max(200),
+    }),
+    userAgent: z.string().trim().max(400).optional(),
+  })
+  .strict();
+export type PushSubscribeBody = z.infer<typeof pushSubscribeBody>;
