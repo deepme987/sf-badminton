@@ -118,22 +118,31 @@ export function InstallButton() {
 
   if (isStandalone) return null;
 
-  // Render order: install button (if event captured) in the AppBar slot;
-  // iOS hint card is rendered via portal-like fixed positioning below the
-  // bar. We keep both inside one component so the parent doesn't need to
-  // know about either.
+  // Three render paths:
+  //   - Android / desktop Chrome: native prompt button (always visible once
+  //     the event fires).
+  //   - iOS Safari: button that toggles the "tap Share → Add to Home Screen"
+  //     hint card. Persistent so it's always discoverable, not just first
+  //     visit.
+  //   - Other browsers (Firefox, etc): render nothing — there's no install
+  //     path we can offer.
+  const showNativeButton = !!promptEvent;
+  const showIosButton = isIosSafariRef.current;
+  if (!showNativeButton && !showIosButton) return null;
+
   return (
     <>
-      {promptEvent ? (
-        <IconButton aria-label="Install app" onClick={handleClick}>
-          <IconDownload />
-        </IconButton>
-      ) : null}
+      <IconButton
+        aria-label={showNativeButton ? 'Install app' : 'How to install'}
+        onClick={showNativeButton ? handleClick : () => setIosHintOpen((v) => !v)}
+      >
+        <IconDownload />
+      </IconButton>
       {iosHintOpen ? (
         <div
           role="status"
           aria-live="polite"
-          className="fixed top-16 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-1.5rem)] w-[22rem] bg-surface border border-rule rounded-md shadow-lg px-3 py-3 flex items-start gap-3 animate-slide-down"
+          className="fixed top-16 left-1/2 -translate-x-1/2 z-30 max-w-[calc(100vw-1.5rem)] w-[22rem] bg-surface border border-rule rounded-md shadow-lg px-3 py-3 flex items-start gap-3"
         >
           <div className="flex-1 min-w-0 t-small text-ink-soft">
             Install to your home screen: tap{' '}

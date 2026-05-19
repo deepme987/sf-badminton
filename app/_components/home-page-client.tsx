@@ -85,7 +85,7 @@ export function HomePageClient({ initialUpcoming, initialPast }: HomePageClientP
           className="btn-primary w-full h-12 t-section"
           style={{ borderRadius: 8 }}
         >
-          + New session
+          New session
         </Link>
       </BottomBar>
     </>

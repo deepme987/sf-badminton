@@ -941,7 +941,7 @@ function renderTopCTA(args: {
           disabled={busy || isOptimistic}
           className="btn-ghost"
         >
-          + Add a +1
+          Add a +1
         </button>
       </span>
     );
@@ -1004,7 +1004,7 @@ function renderBottomBarCTA(args: {
           className="btn-ghost flex-1 h-12 t-section"
           style={{ borderRadius: 8 }}
         >
-          + Add a +1
+          Add a +1
         </button>
         <button
           type="button"

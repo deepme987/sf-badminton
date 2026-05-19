@@ -29,14 +29,8 @@ export const metadata: Metadata = {
     statusBarStyle: 'default',
   },
   manifest: '/manifest.webmanifest',
-  icons: {
-    icon: [
-      { url: '/icon.svg', type: 'image/svg+xml' },
-      { url: '/icon-512.png', sizes: '512x512', type: 'image/png' },
-    ],
-    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
-    shortcut: '/icon-512.png',
-  },
+  // Favicon, icon, and apple-icon are auto-routed from app/favicon.ico,
+  // app/icon.png, and app/apple-icon.png — no need to declare them here.
   openGraph: {
     title: 'SFB',
     description: 'Who is playing this week.',
