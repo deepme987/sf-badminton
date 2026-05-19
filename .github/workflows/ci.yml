@@ -9,6 +9,14 @@ on:
 permissions:
   contents: read
 
+# Opt actions/checkout@v4 + actions/setup-node@v4 (which ship as Node.js 20
+# binaries internally) onto the Node.js 24 runtime. GitHub forces this
+# default on June 2nd, 2026; setting the flag now silences the deprecation
+# warning and verifies we work on Node 24 ahead of the cutover. Drop this
+# block once we move to v5 of those actions (not yet released as of writing).
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: 'true'
+
 jobs:
   ci:
     name: typecheck + lint + build
