@@ -73,9 +73,25 @@ See `CLAUDE.md` for the full rundown. Highlights:
   Covers full lifecycle (create → join → +1 → drop → rejoin), chrome,
   identity, waitlist, past-session read-only.
 
-Both need a real Supabase connection. The vitest suite uses your
-`DATABASE_URL` and resets tables between tests — point it at a dev
-project, not your prod data.
+### ⚠️ Vitest is local-only, NEVER point it at prod
+
+The unit suite calls `db.delete(sessions)` in every test's `beforeEach`
+to guarantee an isolated table state. **If `DATABASE_URL` points at a
+shared Supabase project, every `npm test` run wipes every session in
+that project.**
+
+For this reason `npm test` is **not** wired into CI today — CI runs
+`typecheck`, `lint`, and `build` only. Spin up your own Supabase free-tier
+project for local Vitest runs and point your `.env.local` `DATABASE_URL`
+at it.
+
+If you want CI to run Vitest, create a second Supabase project just for
+tests and add its `DATABASE_URL` + `SUPABASE_SECRET_KEY` as repo secrets,
+then uncomment the `Vitest` step in `.github/workflows/ci.yml`.
+
+Playwright is safer — every test creates its own session and deletes
+just that session in `afterAll`. No table-wide resets. Still, prefer a
+dev DB locally.
 
 ## Reporting bugs
 

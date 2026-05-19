@@ -39,17 +39,21 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Vitest hits the real Supabase via DATABASE_URL — the suite resets
-      # tables in beforeEach so PR runs don't pollute prod data, but they
-      # DO share the project. If a contributor opens many simultaneous PRs,
-      # the runs serialize on the DB lock; that's fine for our throughput.
-      - name: Vitest
-        env:
-          DATABASE_URL: ${{ secrets.DATABASE_URL }}
-          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
-          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
-        run: npm test
+      # ⚠️ Vitest is INTENTIONALLY not run in CI.
+      #
+      # The unit suite resets `sessions` via `db.delete(sessions)` in
+      # beforeEach (see tests/_helpers.ts). When two CI runs hit the same
+      # Supabase project (e.g. concurrent PRs, or two pushes in quick
+      # succession), one run wipes the other's fixtures mid-test → flake.
+      # More importantly, the same destructive reset would wipe production
+      # sessions if DATABASE_URL points anywhere live.
+      #
+      # Vitest must be run LOCALLY against the developer's own dev DB. See
+      # CONTRIBUTING.md → "Tests".
+      #
+      # To re-enable safely we'd need a dedicated test Supabase project
+      # (free tier is fine) wired as a separate secret; only that
+      # connection string should appear in this workflow.
 
       # The Next production build catches issues that typecheck doesn't —
       # missing imports, route conflicts, dynamic-render bugs. Cheap on CI.

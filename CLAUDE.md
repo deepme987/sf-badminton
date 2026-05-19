@@ -64,7 +64,7 @@ From `PLAN.md` — not up for debate without an issue first:
 | `npm run dev` | Dev server on :3000 |
 | `npm run typecheck` | TypeScript strict, `--noEmit` |
 | `npm run lint` | ESLint, 0 warnings allowed |
-| `npm test` | Vitest (needs DATABASE_URL) |
+| `npm test` | Vitest (needs DATABASE_URL — **wipes `sessions` table, NEVER point at prod**) |
 | `npm run test:e2e` | Playwright (needs Supabase + dev server) |
 | `npm run test:e2e:headed` | Same, watch the browser |
 | `npm run build` | Production build (will clobber `next dev`'s `.next`) |
@@ -88,6 +88,10 @@ From `PLAN.md` — not up for debate without an issue first:
 - Schema migrations — apply via Supabase MCP, NEVER edit via `drizzle-kit push`
 - The service worker cache strategy (`public/sw.js`)
 - Push notification payloads — they're versioned by SW handler
+- The CI workflow's "Vitest is intentionally not run in CI" comment.
+  `tests/_helpers.ts` wipes the `sessions` table in `beforeEach`. Running
+  Vitest against prod (or any shared DB) deletes every session. Re-enabling
+  requires a dedicated test Supabase project first.
 
 ## When you're done
 
