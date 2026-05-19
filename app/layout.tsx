@@ -3,6 +3,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { ToastProvider } from './_components/toast';
+import { ServiceWorkerRegister } from './_components/sw-register';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -69,6 +70,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         * mobile chrome doesn't leave white space beneath content. */}
       <body>
         <ToastProvider>{children}</ToastProvider>
+        <ServiceWorkerRegister />
       </body>
     </html>
   );

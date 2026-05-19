@@ -66,6 +66,31 @@ SQL editor (the `sessions`, `courts`, `slots`, `events` tables — see
 | `npm run test:e2e:headed` | Same, watch the browser |
 | `npm run test:e2e:ui` | Playwright trace-viewer mode |
 
+## Deploying
+
+Cleanest path is via Vercel's GitHub integration.
+
+1. **Connect the repo**
+   - Go to [vercel.com/new](https://vercel.com/new) and import `deepme987/sf-badminton`.
+   - Framework should auto-detect as **Next.js**. Don't override.
+
+2. **Add environment variables** (Project Settings → Environment Variables, scope = Production + Preview + Development):
+
+   ```
+   NEXT_PUBLIC_SUPABASE_URL=https://<project-ref>.supabase.co
+   NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+   SUPABASE_SECRET_KEY=sb_secret_...
+   DATABASE_URL=postgresql://postgres.<ref>:<password>@aws-1-us-west-2.pooler.supabase.com:6543/postgres
+   ```
+
+   See [`.env.example`](./.env.example) for what each value does.
+
+3. **Deploy.** Vercel auto-detects Next.js, runs `npm run build`, and publishes to `https://sf-badminton-<hash>.vercel.app` (or your custom domain if you set one).
+
+4. **Confirm the OG image works**: paste your production URL in WhatsApp or iMessage; the link preview should render the SFB logo + the "Who is playing this week" tagline.
+
+For a custom domain, point a DNS A/CNAME record at Vercel per [their docs](https://vercel.com/docs/projects/domains/add-a-domain).
+
 ## Project layout
 
 ```
