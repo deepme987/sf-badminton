@@ -31,16 +31,17 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      # Vitest unit suite requires DATABASE_URL pointed at a real Supabase
-      # project. Wire that up as a repo secret (Settings → Secrets and
-      # variables → Actions) named `DATABASE_URL` and uncomment the block
-      # below to run unit tests on every PR.
-      #
-      # - name: Vitest
-      #   env:
-      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
-      #     SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
-      #   run: npm test
+      # Vitest hits the real Supabase via DATABASE_URL — the suite resets
+      # tables in beforeEach so PR runs don't pollute prod data, but they
+      # DO share the project. If a contributor opens many simultaneous PRs,
+      # the runs serialize on the DB lock; that's fine for our throughput.
+      - name: Vitest
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+        run: npm test
 
       # The Next production build catches issues that typecheck doesn't —
       # missing imports, route conflicts, dynamic-render bugs. Cheap on CI.
