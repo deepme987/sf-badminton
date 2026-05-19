@@ -1,6 +1,6 @@
 import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
-import { errorResponse, parseBody, requireDeviceId } from '@/lib/api/http';
+import { enforceRateLimit, errorResponse, parseBody, requireDeviceId } from '@/lib/api/http';
 import { addPlusOneBody } from '@/lib/api/schemas';
 import { getDb } from '@/lib/db/client';
 import { ServiceError } from '@/lib/errors';
@@ -18,6 +18,8 @@ interface RouteContext {
 export async function POST(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
   try {
     const deviceId = requireDeviceId(req);
+    const limited = enforceRateLimit(deviceId);
+    if (limited) return limited;
     const { id } = await ctx.params;
     const body = await parseBody(req, addPlusOneBody);
 

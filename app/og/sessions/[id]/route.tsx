@@ -9,7 +9,25 @@ export const dynamic = 'force-dynamic';
 
 const WIDTH = 1200;
 const HEIGHT = 630;
-const TZ = 'America/Los_Angeles';
+const DEFAULT_TZ = 'America/Los_Angeles';
+
+/**
+ * Resolve the IANA timezone for the OG image. Accepts `?tz=America/New_York`
+ * via the query string; falls back to PT if missing or unparseable. We
+ * validate by attempting to construct a DateTimeFormat — invalid zones
+ * throw a RangeError which we catch.
+ */
+function resolveTz(req: Request): string {
+  try {
+    const url = new URL(req.url);
+    const candidate = url.searchParams.get('tz');
+    if (!candidate) return DEFAULT_TZ;
+    new Intl.DateTimeFormat('en-US', { timeZone: candidate });
+    return candidate;
+  } catch {
+    return DEFAULT_TZ;
+  }
+}
 
 // ─── Sheet design tokens (light) ──────────────────────────────────────────
 const BG = '#FAFAFA';
@@ -59,27 +77,27 @@ interface RenderInput {
   spotsOpen: number;
 }
 
-function formatDayLabel(startsAt: number): string {
+function formatDayLabel(startsAt: number, tz: string): string {
   return new Date(startsAt).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
-    timeZone: TZ,
+    timeZone: tz,
   });
 }
 
-function formatTimeLabel(startsAt: number, endsAt: number): string {
+function formatTimeLabel(startsAt: number, endsAt: number, tz: string): string {
   const opts: Intl.DateTimeFormatOptions = {
     hour: 'numeric',
     minute: '2-digit',
-    timeZone: TZ,
+    timeZone: tz,
   };
   const start = new Date(startsAt).toLocaleTimeString('en-US', opts);
   const end = new Date(endsAt).toLocaleTimeString('en-US', opts);
   return `${start} – ${end}`;
 }
 
-function projectSession(id: string, session: SessionView): RenderInput {
+function projectSession(id: string, session: SessionView, tz: string): RenderInput {
   const confirmed = session.courts.reduce((sum, c) => sum + c.slots.length, 0);
   const totalCapacity = session.courts.reduce((sum, c) => sum + c.capacity, 0);
   const waitlistCount = session.waitlist.length;
@@ -89,8 +107,8 @@ function projectSession(id: string, session: SessionView): RenderInput {
   return {
     id,
     venueLabel,
-    dayLabel: formatDayLabel(session.startsAt),
-    timeLabel: formatTimeLabel(session.startsAt, session.endsAt),
+    dayLabel: formatDayLabel(session.startsAt, tz),
+    timeLabel: formatTimeLabel(session.startsAt, session.endsAt, tz),
     confirmed,
     totalCapacity,
     waitlistCount,
@@ -357,8 +375,9 @@ const OG_HEADERS = {
   'Cache-Control': 'public, max-age=60, s-maxage=60, stale-while-revalidate=300',
 };
 
-export async function GET(_req: Request, ctx: RouteContext): Promise<Response> {
+export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
   const { id } = await ctx.params;
+  const tz = resolveTz(req);
   const fonts = await loadFonts();
   const interFonts = [
     { name: 'Inter', data: fonts.regular, style: 'normal' as const, weight: 400 as const },
@@ -368,7 +387,7 @@ export async function GET(_req: Request, ctx: RouteContext): Promise<Response> {
 
   try {
     const session = await getSession(getDb(), id);
-    const input = projectSession(id, session);
+    const input = projectSession(id, session, tz);
     return new ImageResponse(renderCard(input), {
       width: WIDTH,
       height: HEIGHT,

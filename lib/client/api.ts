@@ -177,6 +177,20 @@ export async function deleteSession(id: string, deviceId: string): Promise<void>
   });
 }
 
+export async function rotateCreatorCode(
+  sessionId: string,
+  deviceId: string,
+): Promise<{ session: SessionView; code: string }> {
+  return request<{ session: SessionView; code: string }>(
+    `/api/sessions/${encodeURIComponent(sessionId)}/creator-code/rotate`,
+    {
+      method: 'POST',
+      body: JSON.stringify({}),
+      deviceId,
+    },
+  );
+}
+
 export async function setSessionCost(
   id: string,
   totalCostCents: number | null,

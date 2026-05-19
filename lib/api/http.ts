@@ -10,8 +10,36 @@ import type { NextRequest } from 'next/server';
 import { NextResponse } from 'next/server';
 import { ZodError, type ZodTypeAny, type z } from 'zod';
 import { ServiceError, isServiceError } from '../errors';
+import { checkRateLimit } from './rate-limit';
 
 export const DEVICE_ID_HEADER = 'x-device-id';
+
+/**
+ * Apply the token-bucket rate limit and return a 429 response if exhausted.
+ * Returns `null` when the caller may proceed.
+ *
+ * The `Retry-After` header is sent in seconds (per RFC 7231) rounded up so we
+ * never tell a client "0 seconds" when there's still wait time.
+ */
+export function enforceRateLimit(deviceId: string, cost: number = 1): NextResponse | null {
+  const result = checkRateLimit(deviceId, cost);
+  if (result.ok) return null;
+  const retryAfterSec = Math.max(1, Math.ceil(result.retryAfterMs / 1000));
+  return NextResponse.json(
+    {
+      error: {
+        code: 'rate_limited',
+        message: 'Too many requests. Slow down for a moment.',
+      },
+    },
+    {
+      status: 429,
+      headers: {
+        'Retry-After': String(retryAfterSec),
+      },
+    },
+  );
+}
 
 export function requireDeviceId(req: NextRequest): string {
   const id = req.headers.get(DEVICE_ID_HEADER);

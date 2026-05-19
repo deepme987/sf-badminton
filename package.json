@@ -20,6 +20,8 @@
     "db:studio": "drizzle-kit studio"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.0",
+    "@vercel/analytics": "^2.0.1",
     "drizzle-orm": "^0.36.4",
     "next": "15.5.18",
     "postgres": "^3.4.5",

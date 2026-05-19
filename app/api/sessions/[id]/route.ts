@@ -1,7 +1,7 @@
 import type { NextRequest } from 'next/server';
 import type { NextResponse } from 'next/server';
 import { NextResponse as Res } from 'next/server';
-import { errorResponse, parseBody, requireDeviceId } from '@/lib/api/http';
+import { enforceRateLimit, errorResponse, parseBody, requireDeviceId } from '@/lib/api/http';
 import { updateSessionBody } from '@/lib/api/schemas';
 import { getDb } from '@/lib/db/client';
 import { deleteSession, getSession, setTotalCost, updateSession } from '@/lib/services';
@@ -26,6 +26,8 @@ export async function GET(_req: NextRequest, ctx: RouteContext): Promise<NextRes
 export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
   try {
     const deviceId = requireDeviceId(req);
+    const limited = enforceRateLimit(deviceId);
+    if (limited) return limited;
     const { id } = await ctx.params;
     const body = await parseBody(req, updateSessionBody);
 
@@ -53,6 +55,8 @@ export async function PATCH(req: NextRequest, ctx: RouteContext): Promise<NextRe
 export async function DELETE(req: NextRequest, ctx: RouteContext): Promise<NextResponse> {
   try {
     const deviceId = requireDeviceId(req);
+    const limited = enforceRateLimit(deviceId);
+    if (limited) return limited;
     const { id } = await ctx.params;
     await deleteSession(getDb(), id, deviceId);
     return Res.json({ ok: true });

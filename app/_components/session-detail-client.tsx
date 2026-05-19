@@ -13,6 +13,7 @@ import {
   fetchSession,
   joinSession,
   patchCourt,
+  rotateCreatorCode,
   setSessionCost,
 } from '@/lib/client/api';
 import {
@@ -23,6 +24,7 @@ import {
 } from '@/lib/client/session-view';
 import { useIdentity } from '@/lib/client/use-identity';
 import { writeIdentity } from '@/lib/client/identity';
+import { useSessionRealtime } from '@/lib/client/use-session-realtime';
 import { copyText, shareUrl } from '@/lib/client/clipboard';
 import { getVenueMaxCourts } from '@/lib/venues';
 import {
@@ -66,8 +68,6 @@ type ModalKind =
   | { kind: 'delete' }
   | { kind: 'set-court-number'; court: CourtView }
   | { kind: 'name-prompt' };
-
-const POLL_INTERVAL_MS = 8000;
 
 export function SessionDetailClient({
   initialSession,
@@ -113,74 +113,6 @@ export function SessionDetailClient({
     }
   }, [isReady, identity, modal.kind]);
 
-  useEffect(() => {
-    let cancelled = false;
-    let timer: ReturnType<typeof setInterval> | null = null;
-
-    const stop = () => {
-      if (timer) {
-        clearInterval(timer);
-        timer = null;
-      }
-    };
-
-    const tick = async () => {
-      if (cancelled) return;
-      if (document.visibilityState !== 'visible') return;
-      setIsRefetching(true);
-      try {
-        const fresh = await fetchSession(session.id);
-        if (!cancelled) {
-          maybeFirePromotionToasts(fresh, identity?.deviceId, toast, seenPromotionsRef);
-          // Defensive cleanup: a successful poll always replaces local state
-          // wholesale. If an optimistic slot is still hanging around, the
-          // server response is the source of truth — drop the optimistic
-          // entry rather than letting both coexist (which can mangle names
-          // on the next render).
-          setSession(fresh);
-        }
-      } catch (cause) {
-        // 404 means the session was deleted server-side (creator hit
-        // Delete, or a test harness removed it). Stop polling immediately
-        // and surface a sticky banner instead of redirecting — the user
-        // should see WHY the page went stale.
-        if (cause instanceof ApiError && cause.code === 'not_found') {
-          if (!cancelled) {
-            setServerDeleted(true);
-            stop();
-          }
-          return;
-        }
-        // Anything else (network blip, 500) — silently let the next tick
-        // try again. The user shouldn't see a toast on every transient
-        // hiccup during a background poll.
-      } finally {
-        if (!cancelled) setIsRefetching(false);
-      }
-    };
-
-    const start = () => {
-      if (timer) return;
-      timer = setInterval(tick, POLL_INTERVAL_MS);
-    };
-    const onVis = () => {
-      if (document.visibilityState === 'visible') {
-        start();
-        void tick();
-      } else {
-        stop();
-      }
-    };
-
-    onVis();
-    document.addEventListener('visibilitychange', onVis);
-    return () => {
-      cancelled = true;
-      stop();
-      document.removeEventListener('visibilitychange', onVis);
-    };
-  }, [session.id, identity?.deviceId, toast]);
-
   const refresh = useCallback(async () => {
     setIsRefetching(true);
     try {
@@ -188,16 +120,42 @@ export function SessionDetailClient({
       maybeFirePromotionToasts(fresh, identity?.deviceId, toast, seenPromotionsRef);
       setSession(fresh);
     } catch (cause) {
-      // Same handling as the polling tick — 404 means the session was
-      // server-side deleted. Other errors are silent (the caller's own
-      // try/catch handles user-visible toasts on mutations).
+      // 404 means the session was deleted server-side. We stop subscribing
+      // (by flipping `serverDeleted`, which gates `enabled` below) and the
+      // sticky banner takes over the top of the page.
       if (cause instanceof ApiError && cause.code === 'not_found') {
         setServerDeleted(true);
       }
+      // Anything else (network blip, 500) — silently let the next event
+      // try again. Users shouldn't see a toast on every transient hiccup.
     } finally {
       setIsRefetching(false);
     }
   }, [session.id, identity?.deviceId, toast]);
+
+  // Tab-visibility gating for the realtime subscription. When the tab goes
+  // hidden, we disable the channel to release server resources; when it
+  // comes back, the hook re-subscribes AND immediately re-runs `onChange`
+  // (its on-SUBSCRIBED callback), which calls `refresh()` — that's how we
+  // catch up after a long idle without a separate "visible" effect.
+  const [isVisible, setIsVisible] = useState(() =>
+    typeof document === 'undefined' ? true : document.visibilityState === 'visible',
+  );
+  useEffect(() => {
+    if (typeof document === 'undefined') return;
+    const onVis = () => setIsVisible(document.visibilityState === 'visible');
+    document.addEventListener('visibilitychange', onVis);
+    return () => document.removeEventListener('visibilitychange', onVis);
+  }, []);
+
+  // Realtime status is currently observed but not surfaced in the UI; the
+  // hook handles its own retry/teardown. We keep the binding so a future
+  // "live / disconnected" pill is one prop away.
+  useSessionRealtime({
+    sessionId: session.id,
+    enabled: isVisible && !serverDeleted,
+    onChange: refresh,
+  });
 
   // ─── Handlers ────────────────────────────────────────────────────────────
 
@@ -367,6 +325,19 @@ export function SessionDetailClient({
     );
   }, [session.creatorCode, toast]);
 
+  const handleRotateCreatorCode = useCallback(async (): Promise<string | null> => {
+    if (!identity) return null;
+    try {
+      const { session: fresh, code } = await rotateCreatorCode(session.id, identity.deviceId);
+      setSession(fresh);
+      toast.show('New creator code generated. Save it.', 'success');
+      return code;
+    } catch (cause) {
+      handleError(cause, toast);
+      return null;
+    }
+  }, [identity, session.id, toast]);
+
   const handleCopyRoster = useCallback(async () => {
     const text = buildRosterText(session, venueText);
     const ok = await copyText(text);
@@ -456,6 +427,7 @@ export function SessionDetailClient({
                 onDelete={() => setModal({ kind: 'delete' })}
                 creatorCode={session.creatorCode}
                 onCopyCreatorCode={handleCopyCreatorCode}
+                onRotateCreatorCode={handleRotateCreatorCode}
               />
             ) : null}
           </>
@@ -1296,13 +1268,27 @@ function CreatorKebab({
   onDelete,
   creatorCode,
   onCopyCreatorCode,
+  onRotateCreatorCode,
 }: {
   onDelete: () => void;
   creatorCode: string;
   onCopyCreatorCode: () => void | Promise<void>;
+  onRotateCreatorCode: () => Promise<string | null>;
 }) {
   const [open, setOpen] = useState(false);
   const [revealed, setRevealed] = useState(false);
+  // `displayCode` shows whatever the user should see right now — either the
+  // existing creator code or, after a successful rotation, the freshly
+  // returned one. We surface it locally so the parent can update via the
+  // SessionView in the same tick without us flashing the old value first.
+  const [displayCode, setDisplayCode] = useState(creatorCode);
+  const [confirmingRotate, setConfirmingRotate] = useState(false);
+  const [rotating, setRotating] = useState(false);
+
+  useEffect(() => {
+    setDisplayCode(creatorCode);
+  }, [creatorCode]);
+
   useEffect(() => {
     if (!open) return;
     const onDoc = () => setOpen(false);
@@ -1310,8 +1296,23 @@ function CreatorKebab({
     return () => document.removeEventListener('click', onDoc);
   }, [open]);
   useEffect(() => {
-    if (!open) setRevealed(false);
+    if (!open) {
+      setRevealed(false);
+      setConfirmingRotate(false);
+    }
   }, [open]);
+
+  const handleConfirmRotate = async () => {
+    setRotating(true);
+    try {
+      const next = await onRotateCreatorCode();
+      if (next) setDisplayCode(next);
+    } finally {
+      setRotating(false);
+      setConfirmingRotate(false);
+    }
+  };
+
   return (
     <div className="relative">
       <IconButton
@@ -1334,7 +1335,7 @@ function CreatorKebab({
           {revealed ? (
             <div className="px-4 py-3">
               <div className="t-label mb-1.5">Creator code</div>
-              <div className="font-mono t-body text-ink break-all mb-2">{creatorCode}</div>
+              <div className="font-mono t-body text-ink break-all mb-2">{displayCode}</div>
               <div className="flex gap-2">
                 <button
                   type="button"
@@ -1348,6 +1349,43 @@ function CreatorKebab({
                 <span className="t-small text-ink-faint">
                   Use this to reclaim creator powers from another device.
                 </span>
+              </div>
+              <div className="mt-3 pt-3 border-t border-rule">
+                {confirmingRotate ? (
+                  <div>
+                    <p className="t-small text-ink-soft mb-2">
+                      Are you sure? The old code will stop working.
+                    </p>
+                    <div className="flex gap-3">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          void handleConfirmRotate();
+                        }}
+                        disabled={rotating}
+                        className="text-link t-small"
+                      >
+                        {rotating ? 'Rotating…' : 'Yes, rotate'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setConfirmingRotate(false)}
+                        disabled={rotating}
+                        className="text-link t-small text-ink-soft"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setConfirmingRotate(true)}
+                    className="text-link t-small"
+                  >
+                    Rotate code
+                  </button>
+                )}
               </div>
             </div>
           ) : (

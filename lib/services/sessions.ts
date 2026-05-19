@@ -237,6 +237,42 @@ export async function deleteSession(
   });
 }
 
+/**
+ * Rotate a session's creator code. Creator-only. Returns the fresh
+ * SessionView plus the new code separately so the caller can flash it once
+ * and not re-leak it through any cached view.
+ *
+ * We intentionally do NOT log the new code value into the events payload —
+ * the audit trail records that a rotation happened, but the code itself
+ * stays out of the activity feed (and out of any /events read).
+ */
+export async function rotateCreatorCode(
+  db: DbClient,
+  sessionId: string,
+  requesterDeviceId: string,
+): Promise<{ session: SessionView; code: string }> {
+  return db.transaction(async (tx) => {
+    const session = await requireSession(tx, sessionId);
+    requireCreator(session, requesterDeviceId);
+
+    const newCode = generateCreatorCode(session.id);
+    await tx
+      .update(sessions)
+      .set({ creatorCode: newCode })
+      .where(eq(sessions.id, sessionId));
+
+    await insertEvent(tx, {
+      sessionId,
+      deviceId: requesterDeviceId,
+      action: 'rotate_creator_code',
+      payload: {},
+    });
+
+    const view = await loadSessionView(tx, sessionId);
+    return { session: view, code: newCode };
+  });
+}
+
 export async function setTotalCost(
   db: DbClient,
   sessionId: string,

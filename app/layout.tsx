@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
+import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { ToastProvider } from './_components/toast';
 import { ServiceWorkerRegister } from './_components/sw-register';
@@ -77,6 +78,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorkerRegister />
+        <Analytics />
       </body>
     </html>
   );
