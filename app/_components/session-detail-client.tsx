@@ -104,14 +104,19 @@ export function SessionDetailClient({
   const nameById = useMemo(() => slotNameMap(session), [session]);
   const venueText = venueNameFromSession(session);
 
+  // Auto-prompt for a display name AT MOST ONCE per page mount. If the
+  // visitor dismisses it (they want to read the roster before deciding to
+  // join), we don't re-pop the modal — the Join button still triggers it
+  // when they're ready (see handleJoin). Re-opening on every dismissal
+  // creates a soft-lock for anyone who isn't ready to commit yet.
+  const autoPromptedRef = useRef(false);
   useEffect(() => {
     if (!isReady) return;
-    if (!identity) {
+    if (!identity && !autoPromptedRef.current) {
+      autoPromptedRef.current = true;
       setModal({ kind: 'name-prompt' });
-    } else if (modal.kind === 'name-prompt') {
-      setModal({ kind: 'none' });
     }
-  }, [isReady, identity, modal.kind]);
+  }, [isReady, identity]);
 
   const refresh = useCallback(async () => {
     setIsRefetching(true);
