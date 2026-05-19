@@ -1,0 +1,8 @@
+node_modules
+.next
+build
+out
+data
+*.db
+drizzle/meta
+docs/design/html-v1

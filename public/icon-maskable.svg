@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <!--
+    Maskable variant: safe zone is a centered circle of radius ~205px.
+    Android crops to various shapes — keep important content within ~80% of the
+    icon area.
+  -->
+  <rect width="512" height="512" fill="#059669"/>
+  <g transform="translate(256 272) scale(0.78)">
+    <path d="M -88 -148 L -28 76 L 28 76 L 88 -148 Z" fill="#FFFFFF"/>
+    <path d="M -36 56 Q -36 104 0 108 Q 36 104 36 56 Z" fill="#FFFFFF"/>
+    <g stroke="#059669" stroke-width="9" stroke-linecap="round" fill="none">
+      <line x1="-52" y1="-116" x2="-20" y2="44"/>
+      <line x1="0" y1="-148" x2="0" y2="64"/>
+      <line x1="52" y1="-116" x2="20" y2="44"/>
+    </g>
+  </g>
+</svg>
