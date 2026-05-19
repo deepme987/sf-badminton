@@ -15,6 +15,9 @@ export interface CreateSessionInput {
   venueCustom?: string | null;
   creatorDeviceId: string;
   initialCapacity?: number; // default 6, clamped 4..6
+  /** Optional — included in the create_session event payload so the audit
+   *  log can render "Session created by X" without a slot lookup. */
+  creatorDisplayName?: string;
 }
 
 export interface UpdateSessionPatch {

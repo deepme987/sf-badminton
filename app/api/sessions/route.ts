@@ -35,6 +35,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
       venueCustom: body.venueCustom ?? null,
       creatorDeviceId: deviceId,
       initialCapacity: body.initialCapacity,
+      creatorDisplayName: body.creatorDisplayName,
     });
 
     // Fan out a "new session" push to everyone subscribed (minus the creator

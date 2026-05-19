@@ -105,6 +105,9 @@ export async function createSession(
         startsAt: input.startsAt,
         endsAt: input.endsAt,
         initialCapacity: capacity,
+        // Optional. When the client passes it, the audit log can render
+        // "Session created by X" without a slot lookup.
+        creatorDisplayName: input.creatorDisplayName ?? null,
       },
     });
 

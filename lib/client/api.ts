@@ -129,6 +129,8 @@ export interface CreateSessionPayload {
   venue: string;
   venueCustom?: string | null;
   initialCapacity?: number;
+  /** Optional — passed so the audit log can render "Session created by X". */
+  creatorDisplayName?: string;
 }
 
 export async function createSession(

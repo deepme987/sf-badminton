@@ -124,6 +124,9 @@ export function canDropSlot(
 ): DropAuth {
   if (!deviceId) return { canDrop: false, isSelf: false };
   if (slot.state === 'dropped') return { canDrop: false, isSelf: false };
+  // Past sessions are read-only — no one (not even the creator) can change
+  // the roster after the fact. Anyone scrolling back is looking at history.
+  if (session.endsAt < Date.now()) return { canDrop: false, isSelf: false };
   const isSelf = slot.deviceId === deviceId;
   const isCreator = session.creatorDeviceId === deviceId;
   return { canDrop: isSelf || isCreator, isSelf };

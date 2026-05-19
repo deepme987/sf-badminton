@@ -14,6 +14,9 @@ export const createSessionBody = z
     venue: venueEnum,
     venueCustom: z.string().trim().max(120).nullish(),
     initialCapacity: z.number().int().min(4).max(6).optional(),
+    // Optional — the client passes their display name so the audit log can
+    // show "Session created by X". Stored in the create_session event payload.
+    creatorDisplayName: z.string().trim().min(1).max(80).optional(),
   })
   .superRefine((val, ctx) => {
     if (val.venue === OTHER_VENUE) {

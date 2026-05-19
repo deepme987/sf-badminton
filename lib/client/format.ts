@@ -161,7 +161,10 @@ export function formatEvent(
   const payload = event.payload ?? {};
   const action = event.action;
 
-  if (action === 'create_session') return 'Session created.';
+  if (action === 'create_session') {
+    const by = typeof payload.creatorDisplayName === 'string' ? payload.creatorDisplayName : null;
+    return by ? `Session created by ${by}.` : 'Session created.';
+  }
   if (action === 'add_court') {
     const pos = typeof payload.position === 'number' ? payload.position : null;
     return pos !== null ? `Court ${pos} added.` : 'Court added.';

@@ -137,6 +137,7 @@ export default function NewSessionPage() {
           venue,
           venueCustom: venue === 'Other' ? venueCustom.trim() : null,
           initialCapacity: capacity,
+          creatorDisplayName: identity.displayName,
         },
         identity.deviceId,
       );

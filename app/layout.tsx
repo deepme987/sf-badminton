@@ -5,6 +5,7 @@ import { Analytics } from '@vercel/analytics/next';
 import './globals.css';
 import { ToastProvider } from './_components/toast';
 import { ServiceWorkerRegister } from './_components/sw-register';
+import { SwNavListener } from './_components/sw-nav-listener';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -117,6 +118,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         </a>
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorkerRegister />
+        <SwNavListener />
         <Analytics />
       </body>
     </html>

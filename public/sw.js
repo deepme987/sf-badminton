@@ -210,24 +210,46 @@ self.addEventListener('push', (event) => {
   );
 });
 
-// Focus an existing tab if any, otherwise open a fresh window. Some browsers
-// (Safari, older Firefox) restrict `client.navigate` cross-origin — we swallow
-// that error and fall back to just focusing the existing tab.
+// Deep-link strategy on notification tap:
+//   1. If an existing app tab is already AT the target URL → focus it.
+//   2. If another app tab is open → focus it and ask it (via postMessage)
+//      to navigate. The client subscribes to this message and uses the
+//      App Router's `router.push()` so SPA-aware browsers (including
+//      iOS Safari, which won't honour `client.navigate()`) actually move
+//      to the right page.
+//   3. No app tabs open → open a new window directly at the URL.
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const url = (event.notification.data && event.notification.data.url) || '/';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil(
     (async () => {
       const allClients = await self.clients.matchAll({
         type: 'window',
         includeUncontrolled: true,
       });
+      // 1. Already at the target — just focus.
+      for (const client of allClients) {
+        try {
+          const clientPath = new URL(client.url).pathname;
+          if (clientPath === targetUrl.split('?')[0]) {
+            return client.focus();
+          }
+        } catch {
+          // bad client.url — ignore and continue
+        }
+      }
+      // 2. App tab open elsewhere — focus it and ask it to navigate.
       for (const client of allClients) {
         if ('focus' in client) {
           await client.focus();
+          try {
+            client.postMessage({ type: 'sfb:navigate', url: targetUrl });
+          } catch {
+            // postMessage failed — fall through to navigate attempt
+          }
           if ('navigate' in client) {
             try {
-              await client.navigate(url);
+              await client.navigate(targetUrl);
             } catch {
               // ignore — browser disallowed cross-origin navigate
             }
@@ -235,7 +257,8 @@ self.addEventListener('notificationclick', (event) => {
           return;
         }
       }
-      await self.clients.openWindow(url);
+      // 3. No app tab open — open a fresh window straight at the URL.
+      await self.clients.openWindow(targetUrl);
     })(),
   );
 });
