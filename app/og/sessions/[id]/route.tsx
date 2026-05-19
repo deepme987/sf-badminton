@@ -174,7 +174,7 @@ function renderCard(input: RenderInput) {
               color: INK_SOFT,
             }}
           >
-            Vibe Badminton
+            SF Badminton
           </span>
         </div>
         <span
@@ -310,7 +310,7 @@ function renderNotFound() {
             color: INK_SOFT,
           }}
         >
-          Vibe Badminton
+          SF Badminton
         </span>
       </div>
 

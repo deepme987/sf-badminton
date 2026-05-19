@@ -376,7 +376,7 @@ export function SessionDetailClient({
   const handleShareLink = useCallback(async () => {
     if (typeof window === 'undefined') return;
     const url = `${window.location.origin}/sessions/${session.id}`;
-    const result = await shareUrl({ title: 'Vibe Badminton session', url });
+    const result = await shareUrl({ title: 'SF Badminton session', url });
     if (result === 'shared') return; // OS share sheet handled feedback.
     if (result === 'copied') {
       toast.show('Link copied.', 'success');

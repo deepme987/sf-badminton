@@ -181,7 +181,7 @@ export default function ProfilePage() {
 
       <section className="mb-8">
         <h2 className="t-label mb-3">About</h2>
-        <p className="t-small text-ink-faint">Vibe Badminton · v0.1</p>
+        <p className="t-small text-ink-faint">SF Badminton · v0.1</p>
       </section>
 
       <hr className="border-rule my-6" />

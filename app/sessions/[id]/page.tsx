@@ -59,7 +59,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
     };
   } catch {
     return {
-      title: 'Session not found · Vibe Badminton',
+      title: 'Session not found · SFB',
       description: 'This session is gone. The lead probably deleted it.',
     };
   }
