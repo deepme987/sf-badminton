@@ -1,6 +1,6 @@
 {
-  "name": "SF Badminton",
-  "short_name": "SFB",
+  "name": "SF-Badminton",
+  "short_name": "SF-Badminton",
   "description": "Who is playing this week.",
   "start_url": "/",
   "scope": "/",

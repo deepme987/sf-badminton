@@ -37,15 +37,15 @@ const siteUrl =
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  // In-app wordmark is "SFB"; the manifest's full name stays "SF Badminton"
-  // (see public/manifest.webmanifest) so the home-screen launcher reads
-  // properly.
-  title: 'SFB',
+  // The in-app wordmark chip stays "SFB" (compact, lives in the chrome).
+  // External identity surfaces — browser tab / bookmark title, iOS and
+  // Android home-screen launchers — use the full hyphenated name.
+  title: 'SF-Badminton',
   description: 'Who is playing this week.',
-  applicationName: 'SFB',
+  applicationName: 'SF-Badminton',
   appleWebApp: {
     capable: true,
-    title: 'SFB',
+    title: 'SF-Badminton',
     statusBarStyle: 'default',
   },
   manifest: '/manifest.webmanifest',
