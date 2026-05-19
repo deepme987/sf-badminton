@@ -44,6 +44,7 @@ import { EmptySlotRow, SlotRow } from './slot-row';
 import { AppBar, IconButton } from './app-bar';
 import { BottomBar } from './bottom-bar';
 import { IconArrowLeft, IconMore, IconShare } from './icons';
+import { InstallButton } from './install-button';
 import { TopProgressBar } from './skeleton';
 
 interface SessionDetailClientProps {
@@ -409,6 +410,11 @@ export function SessionDetailClient({
         title={appBarTitle}
         right={
           <>
+            {/* Install hint — self-hides when running as installed PWA. Lives
+                here too (not just on home) because shared session links are
+                the most common entry point for first-time visitors, and that
+                is where they decide whether to install. */}
+            <InstallButton />
             {!isPast && canDoMutations ? (
               <>
                 {/* Desktop-only inline primary CTA */}
