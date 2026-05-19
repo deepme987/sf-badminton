@@ -19,6 +19,8 @@ const INK = '#171717';
 const INK_SOFT = '#737373';
 const INK_FAINT = '#A3A3A3';
 const ACCENT = '#059669';
+const ACCENT_INK = '#FFFFFF';
+const HAIRLINE = '#E5E5E5';
 
 /**
  * Resolve the IANA timezone for the OG image. Accepts `?tz=America/New_York`
@@ -68,17 +70,10 @@ interface RouteContext {
 interface RenderInput {
   id: string;
   venueLabel: string;
-  dayLabel: string;
+  weekday: string;
+  dayNum: string;
+  month: string;
   timeLabel: string;
-}
-
-function formatDayLabel(startsAt: number, tz: string): string {
-  return new Date(startsAt).toLocaleDateString('en-US', {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-    timeZone: tz,
-  });
 }
 
 function formatTimeLabel(startsAt: number, endsAt: number, tz: string): string {
@@ -93,24 +88,29 @@ function formatTimeLabel(startsAt: number, endsAt: number, tz: string): string {
 }
 
 function projectSession(id: string, session: SessionView, tz: string): RenderInput {
+  const d = new Date(session.startsAt);
   return {
     id,
     venueLabel: session.venue === 'Other' ? (session.venueCustom ?? 'Other') : session.venue,
-    dayLabel: formatDayLabel(session.startsAt, tz),
+    weekday: d.toLocaleDateString('en-US', { weekday: 'short', timeZone: tz }).toUpperCase(),
+    dayNum: d.toLocaleDateString('en-US', { day: 'numeric', timeZone: tz }),
+    month: d.toLocaleDateString('en-US', { month: 'short', timeZone: tz }).toUpperCase(),
     timeLabel: formatTimeLabel(session.startsAt, session.endsAt, tz),
   };
 }
 
 /**
- * Session card OG. Mirrors the home OG layout (icon on the left, content on
- * the right) so shared links from the app feel like they belong to the same
- * brand surface. Deliberately omits any live counts — OG images are cached
- * at share time, so any number we bake in would be stale within minutes.
- * The recipient gets enough to decide whether to tap; they get truth on
- * the page itself.
+ * Session card OG — ticket-stub layout. The two questions a recipient asks
+ * when a link drops in WhatsApp are "when?" and "where?". Both need to land
+ * before they decide to tap. Left stub: calendar tear-off (weekday, day
+ * number, month) on accent so the date is the visual anchor. Right pane:
+ * TIME and LOCATION stacked at near-equal weight with small label tags.
+ * Live counts are deliberately omitted — OG images cache at share time, so
+ * any number baked in would be stale within minutes. The page itself has
+ * truth.
  */
-function renderCard(input: RenderInput, iconDataUri: string) {
-  const { id, venueLabel, dayLabel, timeLabel } = input;
+function renderCard(input: RenderInput) {
+  const { id, venueLabel, weekday, dayNum, month, timeLabel } = input;
 
   return (
     <div
@@ -121,32 +121,67 @@ function renderCard(input: RenderInput, iconDataUri: string) {
         background: BG,
         color: INK,
         fontFamily: 'Inter',
-        padding: 80,
+        padding: 64,
+        gap: 56,
       }}
     >
-      {/* Left — icon */}
+      {/* Left — calendar stub (the visual anchor) */}
       <div
         style={{
-          width: 320,
-          height: 320,
+          width: 360,
           display: 'flex',
+          flexDirection: 'column',
           alignItems: 'center',
           justifyContent: 'center',
-          marginRight: 56,
+          background: ACCENT,
+          color: ACCENT_INK,
+          borderRadius: 28,
+          padding: '36px 24px',
         }}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={iconDataUri} width={320} height={320} alt="" />
+        <div
+          style={{
+            fontSize: 40,
+            fontWeight: 600,
+            letterSpacing: '0.24em',
+            opacity: 0.92,
+          }}
+        >
+          {weekday}
+        </div>
+        <div
+          style={{
+            fontSize: 240,
+            fontWeight: 600,
+            letterSpacing: '-0.04em',
+            lineHeight: 1,
+            fontVariantNumeric: 'tabular-nums',
+            marginTop: 8,
+          }}
+        >
+          {dayNum}
+        </div>
+        <div
+          style={{
+            fontSize: 44,
+            fontWeight: 600,
+            letterSpacing: '0.24em',
+            opacity: 0.92,
+            marginTop: 8,
+          }}
+        >
+          {month}
+        </div>
       </div>
 
-      {/* Right — kicker, venue (hero), time, day */}
+      {/* Right — TIME + LOCATION (the two glanceable answers) */}
       <div
         style={{
           flex: 1,
           display: 'flex',
           flexDirection: 'column',
           justifyContent: 'center',
-          gap: 18,
+          gap: 36,
         }}
       >
         <div
@@ -156,7 +191,7 @@ function renderCard(input: RenderInput, iconDataUri: string) {
             gap: 12,
             fontSize: 24,
             fontWeight: 600,
-            letterSpacing: '0.16em',
+            letterSpacing: '0.18em',
             textTransform: 'uppercase',
             color: INK_SOFT,
           }}
@@ -164,47 +199,74 @@ function renderCard(input: RenderInput, iconDataUri: string) {
           <div style={{ width: 10, height: 10, borderRadius: '50%', background: ACCENT }} />
           SFB · Session
         </div>
-        <div
-          style={{
-            fontSize: 112,
-            fontWeight: 600,
-            letterSpacing: '-0.03em',
-            lineHeight: 1,
-            color: INK,
-          }}
-        >
-          {venueLabel}
+
+        {/* TIME */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 600,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: INK_FAINT,
+            }}
+          >
+            Time
+          </div>
+          <div
+            style={{
+              fontSize: 80,
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+              fontVariantNumeric: 'tabular-nums',
+              color: INK,
+            }}
+          >
+            {timeLabel}
+          </div>
         </div>
-        <div
-          style={{
-            fontSize: 44,
-            fontWeight: 600,
-            color: INK,
-            fontVariantNumeric: 'tabular-nums',
-            lineHeight: 1.1,
-            marginTop: 8,
-          }}
-        >
-          {timeLabel}
+
+        {/* LOCATION */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div
+            style={{
+              fontSize: 22,
+              fontWeight: 600,
+              letterSpacing: '0.22em',
+              textTransform: 'uppercase',
+              color: INK_FAINT,
+            }}
+          >
+            Location
+          </div>
+          <div
+            style={{
+              fontSize: 80,
+              fontWeight: 600,
+              letterSpacing: '-0.02em',
+              lineHeight: 1.05,
+              color: INK,
+            }}
+          >
+            {venueLabel}
+          </div>
         </div>
+
         <div
           style={{
-            fontSize: 30,
-            color: INK_SOFT,
-            fontWeight: 400,
-          }}
-        >
-          {dayLabel}
-        </div>
-        <div
-          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            paddingTop: 12,
+            borderTop: `1px solid ${HAIRLINE}`,
             fontSize: 22,
             color: INK_FAINT,
             fontFeatureSettings: '"tnum" 1',
-            marginTop: 16,
           }}
         >
-          /s/{id}
+          <span>sf-badminton.vercel.app</span>
+          <span>/s/{id}</span>
         </div>
       </div>
     </div>
@@ -264,7 +326,7 @@ export async function GET(req: Request, ctx: RouteContext): Promise<Response> {
   try {
     const session = await getSession(getDb(), id);
     const input = projectSession(id, session, tz);
-    return new ImageResponse(renderCard(input, icon), {
+    return new ImageResponse(renderCard(input), {
       width: WIDTH,
       height: HEIGHT,
       fonts: interFonts,
