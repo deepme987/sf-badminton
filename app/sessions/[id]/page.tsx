@@ -83,7 +83,7 @@ export default async function SessionDetailPage({ params, searchParams }: PagePr
 
 function SessionNotFound() {
   return (
-    <main className="min-h-screen flex items-center justify-center px-5">
+    <main id="main" className="min-h-screen flex items-center justify-center px-5">
       <div className="max-w-md text-center">
         <h1 className="t-page text-ink mb-3">This session is gone.</h1>
         <p className="t-body text-ink-soft mb-6">

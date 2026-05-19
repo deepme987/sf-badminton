@@ -18,7 +18,7 @@ export default function NotFound() {
         }
         title="Not found"
       />
-      <main className="max-w-md mx-auto px-4 sm:px-6 py-16 text-center">
+      <main id="main" className="max-w-md mx-auto px-4 sm:px-6 py-16 text-center">
         <h1 className="t-page text-ink mb-3">Nothing here.</h1>
         <p className="t-body text-ink-soft mb-6">
           The link might be old, or whoever shared it deleted the page.

@@ -72,11 +72,11 @@ Each item: **What / Where / Severity**. Status: `[x]` done, `[ ]` pending.
 Things I found that aren't loading/visual/perf — surface them so the user can decide priority.
 
 - [ ] **C1.** **Rate limiting.** No rate limiting on `/api/sessions` POST or `/api/slots` mutations. A bad actor could spam joins or create thousands of sessions. Severity: P1. Recommend: Vercel KV + a small token bucket per device id, or Supabase Edge rate limit.
-- [ ] **C2.** **Accessibility audit.**
-  - Modal: focus trap is incomplete — focus can escape the dialog via Tab.
-  - Slot row "Drop" buttons are opacity-0 until hover and only become focusable via the visible class. Keyboard users can tab to them, but the visual affordance is gated on mouse.
-  - `aria-live` regions on the polling refetch should announce changes for screen readers.
-  - Severity: P1.
+- [x] **C2.** **Accessibility audit.** Shipped in Round C:
+  - Modal focus trap: Tab/Shift-Tab cycle within the dialog, Escape closes, focus restored to the previously-focused element on close.
+  - Skip-to-content link in `app/layout.tsx` (visually hidden, revealed on focus). `<main id="main">` markers on every primary content surface.
+  - Slot-row drop buttons get a focus-visible affordance so keyboard users see them appear.
+  - `aria-live="polite"` on the toast region + install hint card. Server-deleted banner uses `role="status"`.
 - [ ] **C3.** **Pull-to-refresh** on mobile (session detail + home). Severity: P3.
 - [ ] **C4.** **Real-time** updates via Supabase channels instead of 8s polling — eliminates the "stale data" feel after long idle. Severity: P2.
 - [ ] **C5.** **Analytics / PostHog**. No usage telemetry. Severity: P2.
@@ -93,11 +93,11 @@ Things I found that aren't loading/visual/perf — surface them so the user can 
 
 ---
 
-## Counts (final)
+## Counts (final, after Rounds A + B + C)
 
-- **Round A done (this PR):** 17 items
-- **Round B deferred:** 9 items
-- **Round C+ deferred:** 15 items
+- **Round A shipped:** 17 items (visual polish, skeletons, audit-log mobile, empty/error states)
+- **Round B shipped:** 5 items (service worker, asset shrink, cache headers, manifest audit, next.config headers); 4 deferred (bundle analyzer, polling→realtime, lazy modals, font subset — all P3 or P2 nice-to-haves)
+- **Round C shipped:** 1 P1 item (accessibility audit); 14 deferred (rate limiting, real-time, analytics, error reporting, pull-to-refresh, audit-log pagination, payment-handle surfacing, paid-flag tracking, leave-confirm, creator-code rotation, share fallback prompt, audit empty state, OG timezone, soft waitlist cap)
 
 ---
 

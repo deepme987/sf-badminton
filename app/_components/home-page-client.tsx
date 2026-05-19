@@ -35,7 +35,7 @@ export function HomePageClient({ initialUpcoming, initialPast }: HomePageClientP
     return (
       <>
         <HomeAppBar showNewSession={false} showProfile={false} />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        <main id="main" className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           {initialUpcoming.length === 0 && initialPast.length === 0 ? (
             <OnboardingCardSkeleton />
           ) : (
@@ -62,7 +62,7 @@ export function HomePageClient({ initialUpcoming, initialPast }: HomePageClientP
     return (
       <>
         <HomeAppBar showNewSession={false} showProfile={false} />
-        <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
+        <main id="main" className="max-w-4xl mx-auto px-4 sm:px-6 py-6">
           <OnboardingCard onSubmit={(name) => setName(name)} />
         </main>
       </>
@@ -72,7 +72,7 @@ export function HomePageClient({ initialUpcoming, initialPast }: HomePageClientP
   return (
     <>
       <HomeAppBar showNewSession showProfile />
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 py-6 has-bottom-bar">
+      <main id="main" className="max-w-4xl mx-auto px-4 sm:px-6 py-6 has-bottom-bar">
         <PopulatedHome
           identity={identity}
           initialUpcoming={initialUpcoming}

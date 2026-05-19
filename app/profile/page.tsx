@@ -90,7 +90,7 @@ export default function ProfilePage() {
         }
         title="Profile"
       />
-      <main className="max-w-md mx-auto px-4 sm:px-6 py-6">
+      <main id="main" className="max-w-md mx-auto px-4 sm:px-6 py-6">
         <section className="mb-8">
         <label htmlFor="profile-name" className="block t-label mb-1.5">
           Your name

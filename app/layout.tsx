@@ -69,6 +69,12 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       {/* min-h-screen replaced with the dvh+svh stack in globals.css so the
         * mobile chrome doesn't leave white space beneath content. */}
       <body>
+        {/* Skip-to-content — first focusable on the page for keyboard users.
+          * Lives outside the toast provider so it isn't gated on any context.
+          * Targets `#main` which each page's `<main>` element opts into. */}
+        <a href="#main" className="skip-link sr-only focus:not-sr-only">
+          Skip to main content
+        </a>
         <ToastProvider>{children}</ToastProvider>
         <ServiceWorkerRegister />
       </body>

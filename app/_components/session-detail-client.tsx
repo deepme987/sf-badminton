@@ -462,6 +462,7 @@ export function SessionDetailClient({
         }
       />
       <main
+        id="main"
         className={`max-w-4xl mx-auto px-4 sm:px-6 py-6 ${showBottomBar ? 'has-bottom-bar' : ''}`}
       >
       {/* Server-deleted banner — sticky top-of-content notice that surfaces

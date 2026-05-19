@@ -187,7 +187,7 @@ export default function NewSessionPage() {
           </span>
         }
       />
-      <main className="max-w-2xl mx-auto px-4 sm:px-6 py-6 has-bottom-bar">
+      <main id="main" className="max-w-2xl mx-auto px-4 sm:px-6 py-6 has-bottom-bar">
         <form id="new-session-form" onSubmit={handleSubmit} className="space-y-8">
         <section>
           <h2 className="t-label mb-3">When</h2>
