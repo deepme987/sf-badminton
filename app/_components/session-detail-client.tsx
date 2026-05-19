@@ -24,6 +24,7 @@ import {
 import { useIdentity } from '@/lib/client/use-identity';
 import { writeIdentity } from '@/lib/client/identity';
 import { copyText, shareUrl } from '@/lib/client/clipboard';
+import { getVenueMaxCourts } from '@/lib/venues';
 import {
   circledPosition,
   formatDollars,
@@ -574,17 +575,28 @@ export function SessionDetailClient({
         />
       ) : null}
 
-      {derived.isCreator && !isPast ? (
-        <div className="mt-8">
-          <button
-            type="button"
-            onClick={() => setModal({ kind: 'add-court' })}
-            className="block w-full text-center text-ink-soft hover:text-ink t-small h-10 leading-[40px] rounded-md border border-dashed border-rule hover:border-ink-faint transition-colors"
-          >
-            + Add court
-          </button>
-        </div>
-      ) : null}
+      {/* "+ Add court" only shows if the venue actually allows another court.
+        * Shuttl caps at 4, OneA at 1 (so always hidden there), Other is uncapped.
+        * The service layer enforces this too; this is the UI fast-path so the
+        * button doesn't dangle when it can't succeed. */}
+      {derived.isCreator && !isPast
+        ? (() => {
+            const cap = getVenueMaxCourts(session.venue);
+            const canAddCourt = cap === null || session.courts.length < cap;
+            if (!canAddCourt) return null;
+            return (
+              <div className="mt-8">
+                <button
+                  type="button"
+                  onClick={() => setModal({ kind: 'add-court' })}
+                  className="block w-full text-center text-ink-soft hover:text-ink t-small h-10 leading-[40px] rounded-md border border-dashed border-rule hover:border-ink-faint transition-colors"
+                >
+                  + Add court
+                </button>
+              </div>
+            );
+          })()
+        : null}
 
       {/* Cost split */}
       <CostSplitSection
