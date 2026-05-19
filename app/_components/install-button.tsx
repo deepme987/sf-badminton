@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { IconButton } from './app-bar';
 import { IconDownload } from './icons';
 
@@ -36,7 +36,9 @@ export function InstallButton() {
   const [promptEvent, setPromptEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [isStandalone, setIsStandalone] = useState(false);
   const [iosHintOpen, setIosHintOpen] = useState(false);
-  const isIosSafariRef = useRef(false);
+  // iOS Safari detection must be state, not a ref — the button visibility
+  // depends on it, so it has to trigger a re-render when set.
+  const [isIosSafari, setIsIosSafari] = useState(false);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -61,10 +63,10 @@ export function InstallButton() {
     const winWithMs = window as Window & { MSStream?: unknown };
     const isIos = /iPad|iPhone|iPod/.test(ua) && !winWithMs.MSStream;
     // CriOS = Chrome on iOS, FxiOS = Firefox on iOS, EdgiOS = Edge on iOS.
-    const isIosSafari = isIos && !/CriOS|FxiOS|EdgiOS/.test(ua);
-    isIosSafariRef.current = isIosSafari;
+    const detectedIosSafari = isIos && !/CriOS|FxiOS|EdgiOS/.test(ua);
+    setIsIosSafari(detectedIosSafari);
 
-    if (!standalone && isIosSafari) {
+    if (!standalone && detectedIosSafari) {
       try {
         const dismissed = window.localStorage.getItem(IOS_HINT_DISMISS_KEY) === '1';
         if (!dismissed) setIosHintOpen(true);
@@ -127,7 +129,7 @@ export function InstallButton() {
   //   - Other browsers (Firefox, etc): render nothing — there's no install
   //     path we can offer.
   const showNativeButton = !!promptEvent;
-  const showIosButton = isIosSafariRef.current;
+  const showIosButton = isIosSafari;
   if (!showNativeButton && !showIosButton) return null;
 
   return (
