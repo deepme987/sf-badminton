@@ -1,4 +1,4 @@
-// Postgres schema for Vibe Badminton (v1). Service API speaks unix-ms; we
+// Postgres schema for SF Badminton (v1). Service API speaks unix-ms; we
 // convert to/from `Date` at the DB boundary (see lib/services/sessions.ts).
 import { sql } from 'drizzle-orm';
 import {

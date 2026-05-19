@@ -81,9 +81,9 @@ test.describe('Session flow', () => {
     await page.getByRole('button', { name: "I'm in" }).first().click();
     await expect(page.getByTitle('Bob')).toBeVisible();
 
-    // Open the +1 modal. Button label is "+ Add a +1" (desktop top inline +
+    // Open the +1 modal. Button label is "Add a +1" (desktop top inline +
     // mobile bottom-bar).
-    await page.getByRole('button', { name: '+ Add a +1' }).first().click();
+    await page.getByRole('button', { name: 'Add a +1' }).first().click();
 
     // Modal asks for the +1's name.
     const modalHeading = page.getByRole('heading', { name: 'Add a +1' });

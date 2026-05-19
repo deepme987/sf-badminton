@@ -69,9 +69,9 @@ test.describe('App chrome', () => {
 
     if (isMobile) {
       await expect(bottomBar).toBeVisible();
-      // The bottom-bar primary CTA should be "+ New session" on the home page.
+      // The bottom-bar primary CTA should be "New session" on the home page.
       await expect(
-        bottomBar.getByRole('link', { name: /\+ New session/ }),
+        bottomBar.getByRole('link', { name: /^New session$/ }),
       ).toBeVisible();
     } else {
       // On desktop the bottom bar is `md:hidden`.

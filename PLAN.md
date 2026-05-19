@@ -1,4 +1,4 @@
-# Vibe Badminton — Initial Plan
+# SF Badminton — Initial Plan
 
 Status: **draft, for review**. Not a commitment. Goal here is alignment before code.
 
