@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: typecheck + lint + build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci --legacy-peer-deps
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Lint
+        run: npm run lint
+
+      # Vitest unit suite requires DATABASE_URL pointed at a real Supabase
+      # project. Wire that up as a repo secret (Settings → Secrets and
+      # variables → Actions) named `DATABASE_URL` and uncomment the block
+      # below to run unit tests on every PR.
+      #
+      # - name: Vitest
+      #   env:
+      #     DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      #     SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+      #   run: npm test
+
+      # The Next production build catches issues that typecheck doesn't —
+      # missing imports, route conflicts, dynamic-render bugs. Cheap on CI.
+      - name: Build
+        env:
+          # Build needs SOMETHING for the public Supabase URL to satisfy the
+          # zod env validation; pass a non-secret placeholder here. Real
+          # values get injected by Vercel at deploy time.
+          NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: sb_publishable_ci_placeholder
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          SUPABASE_SECRET_KEY: sb_secret_ci_placeholder
+        run: npm run build

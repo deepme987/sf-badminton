@@ -1,0 +1,16 @@
+# CODEOWNERS — assigns required reviewers automatically.
+# When a PR touches a path, GitHub requests review from the listed owners.
+#
+# Syntax: `<glob>  <@user-or-team>...`
+# Last match wins.
+
+# Default: everything in the repo needs the maintainer's review.
+*       @deepme987
+
+# Schema + auth + rate-limit + push are load-bearing — make sure the
+# maintainer specifically signs off on changes here.
+/lib/db/                @deepme987
+/lib/services/          @deepme987
+/lib/api/               @deepme987
+/app/api/               @deepme987
+/public/sw.js           @deepme987
