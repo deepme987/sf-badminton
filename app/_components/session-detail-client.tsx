@@ -471,6 +471,19 @@ export function SessionDetailClient({
         </p>
       </div>
 
+      {/* Need-name banner — persistent re-entry point for visitors who landed
+        * on a shared link without a display name set. The auto-prompt modal
+        * opens once on mount; if they dismiss it (or if their cached JS still
+        * has the old broken state, or if they Profile-cleared their identity)
+        * the only other path used to be tapping Join — which is unintuitive
+        * when "Join" looks gated. This banner makes "set your name" a
+        * standalone, always-visible action until identity exists. Auto-hides
+        * the instant identity is set, and is suppressed for past sessions
+        * (read-only, no point promoting Join). */}
+      {isReady && !identity && !isPast ? (
+        <NeedNameBanner onSetName={() => setModal({ kind: 'name-prompt' })} />
+      ) : null}
+
       {/* Metadata strip */}
       <div className="meta-strip mb-6 tnum">
         <span>
@@ -1443,6 +1456,25 @@ function ServerDeletedBanner() {
       <Link href="/" className="btn-ghost shrink-0">
         Home
       </Link>
+    </div>
+  );
+}
+
+function NeedNameBanner({ onSetName }: { onSetName: () => void }) {
+  return (
+    <div
+      role="status"
+      className="mb-6 border border-rule rounded-md bg-zebra px-4 py-3 flex items-center justify-between gap-3"
+    >
+      <div className="t-body text-ink">
+        <span className="font-medium">Add your name to join.</span>{' '}
+        <span className="text-ink-soft">
+          So the roster shows who you are.
+        </span>
+      </div>
+      <button type="button" onClick={onSetName} className="btn-primary shrink-0">
+        Set name
+      </button>
     </div>
   );
 }
