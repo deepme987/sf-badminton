@@ -45,6 +45,8 @@ import { AppBar, IconButton } from './app-bar';
 import { BottomBar } from './bottom-bar';
 import { IconArrowLeft, IconMore, IconShare } from './icons';
 import { InstallButton } from './install-button';
+import { PullToRefresh } from './pull-to-refresh';
+import { LastUpdated } from './last-updated';
 import { TopProgressBar } from './skeleton';
 
 interface SessionDetailClientProps {
@@ -119,12 +121,15 @@ export function SessionDetailClient({
     }
   }, [isReady, identity]);
 
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(() => Date.now());
+
   const refresh = useCallback(async () => {
     setIsRefetching(true);
     try {
       const fresh = await fetchSession(session.id);
       maybeFirePromotionToasts(fresh, identity?.deviceId, toast, seenPromotionsRef);
       setSession(fresh);
+      setLastUpdatedAt(Date.now());
     } catch (cause) {
       // 404 means the session was deleted server-side. We stop subscribing
       // (by flipping `serverDeleted`, which gates `enabled` below) and the
@@ -444,6 +449,7 @@ export function SessionDetailClient({
           </>
         }
       />
+      <PullToRefresh onRefresh={refresh}>
       <main
         id="main"
         className={`max-w-4xl mx-auto px-4 sm:px-6 py-6 ${showBottomBar ? 'has-bottom-bar' : ''}`}
@@ -507,6 +513,9 @@ export function SessionDetailClient({
         <button type="button" onClick={handleCopyRoster} className="text-link">
           Copy roster
         </button>
+        <span className="sep hidden sm:inline">·</span>
+        <span className="sep">·</span>
+        <LastUpdated at={lastUpdatedAt} />
         <span className="sep hidden sm:inline">·</span>
         <button
           type="button"
@@ -606,6 +615,7 @@ export function SessionDetailClient({
       {/* Activity */}
       <ActivitySection session={session} />
       </main>
+      </PullToRefresh>
 
       {showBottomBar ? (
         <BottomBar>
