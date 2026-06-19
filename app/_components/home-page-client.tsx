@@ -1,7 +1,8 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import type { SessionSummary } from '@/lib/services/types';
 import { useIdentity } from '@/lib/client/use-identity';
 import type { Identity } from '@/lib/client/identity';
@@ -15,6 +16,8 @@ import { BottomBar } from './bottom-bar';
 import { InstallButton } from './install-button';
 import { IconPlus, IconUser } from './icons';
 import { OnboardingCardSkeleton, UpcomingListSkeleton } from './skeleton';
+import { PullToRefresh } from './pull-to-refresh';
+import { LastUpdated } from './last-updated';
 
 interface HomePageClientProps {
   initialUpcoming: SessionSummary[];
@@ -197,14 +200,61 @@ function PopulatedHome({
 }) {
   const past = initialPast.slice(0, 5);
   const hasUpcoming = initialUpcoming.length > 0;
+  const router = useRouter();
+
+  // The home page used to be fully static after the SSR pass — no realtime,
+  // no polling, no manual refetch — so the upcoming list silently went stale
+  // whenever someone created a session elsewhere. Three liveness paths now:
+  //   1. Pull-to-refresh below.
+  //   2. Visibility-change → auto-refresh when tab/PWA returns to foreground.
+  //   3. focus event → same idea but fires for desktop tab focus too.
+  // All three call router.refresh(), which re-runs the page's server
+  // component with `force-dynamic` and produces fresh props.
+  const [lastUpdatedAt, setLastUpdatedAt] = useState<number>(() => Date.now());
+  const upcomingSignatureRef = useRef<string>(signatureOf(initialUpcoming));
+
+  useEffect(() => {
+    // When new props arrive (post-router.refresh()), stamp the freshness.
+    // Comparing on a cheap signature avoids stamping when the props ref
+    // changed but the content is identical.
+    const next = signatureOf(initialUpcoming);
+    if (next !== upcomingSignatureRef.current) {
+      upcomingSignatureRef.current = next;
+      setLastUpdatedAt(Date.now());
+    }
+  }, [initialUpcoming]);
+
+  useEffect(() => {
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') router.refresh();
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    window.addEventListener('focus', onVisible);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible);
+      window.removeEventListener('focus', onVisible);
+    };
+  }, [router]);
+
+  const handleRefresh = useCallback(async () => {
+    router.refresh();
+    // router.refresh() is fire-and-forget. Hold the spinner briefly so the
+    // user sees the action register; the new props arrive on their own and
+    // the LastUpdated chip ticks forward when the signature changes.
+    await new Promise((r) => setTimeout(r, 300));
+  }, [router]);
 
   return (
-    <>
+    <PullToRefresh onRefresh={handleRefresh}>
       <div className="flex items-baseline justify-between mb-3">
         <h2 className="t-page text-ink">Upcoming</h2>
-        <span className="t-small text-ink-faint tnum">
-          {initialUpcoming.length} {initialUpcoming.length === 1 ? 'session' : 'sessions'}
-        </span>
+        <div className="flex items-baseline gap-2 tnum">
+          <LastUpdated at={lastUpdatedAt} />
+          <span className="text-ink-faint">·</span>
+          <span className="t-small text-ink-faint">
+            {initialUpcoming.length} {initialUpcoming.length === 1 ? 'session' : 'sessions'}
+          </span>
+        </div>
       </div>
 
       {hasUpcoming ? (
@@ -248,8 +298,17 @@ function PopulatedHome({
           </div>
         </>
       ) : null}
-    </>
+    </PullToRefresh>
   );
+}
+
+// Cheap stable signature of the upcoming list — id + counts. Used to detect
+// genuine prop changes (not just reference churn) so the LastUpdated chip
+// only ticks forward when the data actually changed.
+function signatureOf(list: SessionSummary[]): string {
+  return list
+    .map((s) => `${s.id}:${s.startsAt}:${s.confirmedCount}:${s.totalCapacity}`)
+    .join('|');
 }
 
 function EmptyUpcoming() {
