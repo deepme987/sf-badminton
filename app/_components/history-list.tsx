@@ -24,7 +24,11 @@ export function HistoryList({ sessions }: HistoryListProps) {
   const grouped = new Map<string, SessionSummary[]>();
   for (const s of sessions) {
     const d = new Date(s.startsAt);
-    const key = d.toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+    const key = d.toLocaleDateString('en-US', {
+      month: 'long',
+      year: 'numeric',
+      timeZone: 'America/Los_Angeles',
+    });
     const arr = grouped.get(key) ?? [];
     arr.push(s);
     grouped.set(key, arr);

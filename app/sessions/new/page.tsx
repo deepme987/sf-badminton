@@ -6,6 +6,13 @@ import Link from 'next/link';
 import { KNOWN_VENUES, OTHER_VENUE, getVenueMaxCourts } from '@/lib/venues';
 import { useIdentity } from '@/lib/client/use-identity';
 import { createSession, addCourt, ApiError } from '@/lib/client/api';
+import {
+  DISPLAY_TZ_LABEL,
+  nowPtParts,
+  ptParts,
+  ptToUnixMs,
+  todayPtDateInput,
+} from '@/lib/client/timezone';
 import { Button } from '@/app/_components/button';
 import { useToast } from '@/app/_components/toast';
 import { AppBar, IconButton } from '@/app/_components/app-bar';
@@ -16,22 +23,32 @@ type VenueChoice = 'Shuttl' | 'OneA' | 'Other';
 
 const ALL_VENUES: VenueChoice[] = ['Shuttl', 'OneA', 'Other'];
 
+/**
+ * Default date for the picker: today in PT, bumped to tomorrow once it's
+ * past 6pm PT (most evening games are already locked by then). Computed in
+ * PT so a Tokyo creator scheduling a Bay Area session doesn't see "today"
+ * shifted by a day.
+ */
 function todayDateInput(): string {
-  const now = new Date();
-  if (now.getHours() >= 18) {
-    now.setDate(now.getDate() + 1);
+  const now = nowPtParts();
+  if (now.hour >= 18) {
+    // Bump by a day. Build a UTC anchor at the picked day and read the PT
+    // date back so DST/month-rollovers are correct.
+    const bumped = new Date(Date.UTC(now.year, now.month - 1, now.day + 1));
+    const y = bumped.getUTCFullYear();
+    const m = String(bumped.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(bumped.getUTCDate()).padStart(2, '0');
+    return `${y}-${m}-${d}`;
   }
-  return formatDateInput(now);
+  return todayPtDateInput();
 }
 
-function formatDateInput(d: Date): string {
-  const y = d.getFullYear();
-  const m = (d.getMonth() + 1).toString().padStart(2, '0');
-  const day = d.getDate().toString().padStart(2, '0');
-  return `${y}-${m}-${day}`;
-}
-
-function localToUnixMs(dateStr: string, timeStr: string): number {
+/**
+ * Convert the form's Y-M-D + H:M into a Unix-ms instant, interpreting the
+ * inputs as PT wall-clock values regardless of the picker's local zone.
+ * Without this, a Tokyo creator picking "Friday 7pm" stored Thursday 3am PT.
+ */
+function ptInputToUnixMs(dateStr: string, timeStr: string): number {
   const [yStr, mStr, dStr] = dateStr.split('-');
   const [hStr, miStr] = timeStr.split(':');
   const y = Number(yStr);
@@ -40,7 +57,7 @@ function localToUnixMs(dateStr: string, timeStr: string): number {
   const h = Number(hStr);
   const mi = Number(miStr);
   if ([y, m, d, h, mi].some((n) => Number.isNaN(n))) return NaN;
-  return new Date(y, m - 1, d, h, mi, 0, 0).getTime();
+  return ptToUnixMs(y, m, d, h, mi);
 }
 
 export default function NewSessionPage() {
@@ -91,8 +108,8 @@ export default function NewSessionPage() {
   }
 
   const validate = (): string | null => {
-    const startMs = localToUnixMs(date, start);
-    const endMs = localToUnixMs(date, end);
+    const startMs = ptInputToUnixMs(date, start);
+    const endMs = ptInputToUnixMs(date, end);
     if (!Number.isFinite(startMs) || !Number.isFinite(endMs)) {
       return 'Pick a date and times.';
     }
@@ -128,8 +145,8 @@ export default function NewSessionPage() {
     setError(null);
     setSubmitting(true);
     try {
-      const startsAt = localToUnixMs(date, start);
-      const endsAt = localToUnixMs(date, end);
+      const startsAt = ptInputToUnixMs(date, start);
+      const endsAt = ptInputToUnixMs(date, end);
       const session = await createSession(
         {
           startsAt,
@@ -191,7 +208,12 @@ export default function NewSessionPage() {
       <main id="main" className="max-w-2xl mx-auto px-4 sm:px-6 py-6 has-bottom-bar">
         <form id="new-session-form" onSubmit={handleSubmit} className="space-y-8">
         <section>
-          <h2 className="t-label mb-3">When</h2>
+          <div className="flex items-baseline justify-between mb-3">
+            <h2 className="t-label">When</h2>
+            <span className="t-small text-ink-faint">
+              All times Pacific ({DISPLAY_TZ_LABEL})
+            </span>
+          </div>
           <div className="space-y-3">
             <div>
               <label htmlFor="ns-date" className="block t-label mb-1.5">
@@ -202,7 +224,7 @@ export default function NewSessionPage() {
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                min={formatDateInput(new Date())}
+                min={todayPtDateInput()}
                 className="input-field tnum sm:max-w-xs"
               />
             </div>
@@ -389,28 +411,25 @@ function summaryLine(args: {
   capacity: number;
 }): string {
   const { date, start, end, venue, venueCustom, courtCount, capacity } = args;
-  const startMs = localToUnixMs(date, start);
-  const endMs = localToUnixMs(date, end);
+  const startMs = ptInputToUnixMs(date, start);
+  const endMs = ptInputToUnixMs(date, end);
   let when = '—';
   if (Number.isFinite(startMs) && Number.isFinite(endMs)) {
-    const sd = new Date(startMs);
-    const dateStr = sd.toLocaleDateString(undefined, {
+    const dateStr = new Date(startMs).toLocaleDateString('en-US', {
       weekday: 'short',
       month: 'short',
       day: 'numeric',
+      timeZone: 'America/Los_Angeles',
     });
     const fmt = (h: number, m: number, isPm: boolean) => {
       const h12 = h % 12 === 0 ? 12 : h % 12;
       const ampm = isPm ? 'pm' : 'am';
       return m === 0 ? `${h12}${ampm}` : `${h12}:${m.toString().padStart(2, '0')}${ampm}`;
     };
-    const ed = new Date(endMs);
-    const timeStr = `${fmt(sd.getHours(), sd.getMinutes(), sd.getHours() >= 12)}-${fmt(
-      ed.getHours(),
-      ed.getMinutes(),
-      ed.getHours() >= 12,
-    )}`;
-    when = `${dateStr} · ${timeStr}`;
+    const s = ptParts(startMs);
+    const e = ptParts(endMs);
+    const timeStr = `${fmt(s.hour, s.minute, s.hour >= 12)}-${fmt(e.hour, e.minute, e.hour >= 12)}`;
+    when = `${dateStr} · ${timeStr} PT`;
   }
   const venueStr = venue === 'Other' ? venueCustom.trim() || 'Other' : venue;
   const courtsStr = `${courtCount} court${courtCount === 1 ? '' : 's'} of ${capacity}`;

@@ -111,10 +111,22 @@ export function EmptySlotRow({ position }: EmptySlotRowProps) {
   );
 }
 
-/** "Mon 18" — short weekday + day for the Joined column. */
+/** "Mon 18" — short weekday + day for the Joined column. PT-locked. */
 function formatJoined(ms: number): string {
   const d = new Date(ms);
-  const weekday = d.toLocaleDateString(undefined, { weekday: 'short' });
-  const day = d.getDate();
+  const weekday = d.toLocaleDateString('en-US', {
+    weekday: 'short',
+    timeZone: 'America/Los_Angeles',
+  });
+  const day = ptDayNumber(ms);
   return `${weekday} ${day}`;
+}
+
+function ptDayNumber(ms: number): number {
+  return Number(
+    new Date(ms).toLocaleDateString('en-US', {
+      day: 'numeric',
+      timeZone: 'America/Los_Angeles',
+    }),
+  );
 }
