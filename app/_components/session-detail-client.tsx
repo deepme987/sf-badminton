@@ -917,11 +917,13 @@ function positionWithinWaitlist(session: SessionView, slot: SlotView): number {
 }
 
 // Compact app-bar title — short date for mobile, full venue appended on sm+.
+// PT-locked so out-of-zone viewers don't see the wrong day.
 function shortAppBarTitle(startsAt: number): string {
-  return new Date(startsAt).toLocaleDateString(undefined, {
+  return new Date(startsAt).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    timeZone: 'America/Los_Angeles',
   });
 }
 

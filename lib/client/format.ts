@@ -1,12 +1,18 @@
 /**
- * Render-time formatters. All pure, side-effect-free, no localization beyond
- * the default `Intl.*` behavior.
+ * Render-time formatters. All pure, side-effect-free.
  *
  * Timestamps on the wire are unix-ms numbers — see lib/services/types.ts.
  * Convert to Date only here.
+ *
+ * Everything user-facing is rendered in Pacific Time regardless of the
+ * viewer's local zone. This is a Bay Area badminton group and we had a
+ * Tokyo viewer thinking a Friday session was on Saturday — the calendar
+ * day flipped because the formatters were defaulting to the local zone.
+ * See lib/client/timezone.ts.
  */
 
 import type { EventView, SessionSummary, SessionView } from '@/lib/services/types';
+import { DISPLAY_TZ, ptParts } from './timezone';
 
 const CIRCLED_DIGITS = [
   '①',
@@ -30,44 +36,41 @@ export function waitlistPosition(n: number): string {
   return `W${n}`;
 }
 
-/** "Fri, May 22" or "Today" / "Tomorrow" if within 36h. */
+/** "Fri, May 22" or "Today" / "Tomorrow" if within 36h. Compared in PT. */
 export function shortDate(ms: number, now: number = Date.now()): string {
-  const d = new Date(ms);
-  const today = new Date(now);
-  const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const startOfSession = new Date(d.getFullYear(), d.getMonth(), d.getDate());
-  const dayDiff = Math.round(
-    (startOfSession.getTime() - startOfToday.getTime()) / (24 * 60 * 60 * 1000),
-  );
+  const session = ptParts(ms);
+  const today = ptParts(now);
+  // Build "midnight in PT" dates as UTC anchors so the subtraction is a
+  // straight day-count delta unaffected by the viewer's local zone.
+  const startOfToday = Date.UTC(today.year, today.month - 1, today.day);
+  const startOfSession = Date.UTC(session.year, session.month - 1, session.day);
+  const dayDiff = Math.round((startOfSession - startOfToday) / (24 * 60 * 60 * 1000));
   if (dayDiff === 0) return 'Today';
   if (dayDiff === 1) return 'Tomorrow';
-  return d.toLocaleDateString(undefined, {
+  return new Date(ms).toLocaleDateString('en-US', {
     weekday: 'short',
     month: 'short',
     day: 'numeric',
+    timeZone: DISPLAY_TZ,
   });
 }
 
-/** "Friday, May 22" (long form, used as the session-detail h1). */
+/** "Friday, May 22" (long form, used as the session-detail h1). PT. */
 export function longDate(ms: number): string {
-  const d = new Date(ms);
-  return d.toLocaleDateString(undefined, {
+  return new Date(ms).toLocaleDateString('en-US', {
     weekday: 'long',
     month: 'long',
     day: 'numeric',
+    timeZone: DISPLAY_TZ,
   });
 }
 
-/** "7-9pm" — kebab between numbers, lowercase am/pm at end only. */
+/** "7-9pm PT" — kebab between numbers, lowercase am/pm at end only. */
 export function timeRange(startMs: number, endMs: number): string {
-  const s = new Date(startMs);
-  const e = new Date(endMs);
-  const sH = s.getHours();
-  const sM = s.getMinutes();
-  const eH = e.getHours();
-  const eM = e.getMinutes();
-  const sIsPm = sH >= 12;
-  const eIsPm = eH >= 12;
+  const s = ptParts(startMs);
+  const e = ptParts(endMs);
+  const sIsPm = s.hour >= 12;
+  const eIsPm = e.hour >= 12;
 
   const fmtClock = (h: number, m: number): string => {
     const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -77,21 +80,17 @@ export function timeRange(startMs: number, endMs: number): string {
 
   const sAmPm = sIsPm ? 'pm' : 'am';
   const eAmPm = eIsPm ? 'pm' : 'am';
-  const startStr = sIsPm === eIsPm ? fmtClock(sH, sM) : `${fmtClock(sH, sM)}${sAmPm}`;
-  const endStr = `${fmtClock(eH, eM)}${eAmPm}`;
-  return `${startStr}-${endStr}`;
+  const startStr = sIsPm === eIsPm ? fmtClock(s.hour, s.minute) : `${fmtClock(s.hour, s.minute)}${sAmPm}`;
+  const endStr = `${fmtClock(e.hour, e.minute)}${eAmPm}`;
+  return `${startStr}-${endStr} PT`;
 }
 
-/** "7:00 — 9:00pm" — long form for the session detail header. */
+/** "7:00 — 9:00pm PT" — long form for the session detail header. */
 export function longTimeRange(startMs: number, endMs: number): string {
-  const s = new Date(startMs);
-  const e = new Date(endMs);
-  const sH = s.getHours();
-  const sM = s.getMinutes();
-  const eH = e.getHours();
-  const eM = e.getMinutes();
-  const sIsPm = sH >= 12;
-  const eIsPm = eH >= 12;
+  const s = ptParts(startMs);
+  const e = ptParts(endMs);
+  const sIsPm = s.hour >= 12;
+  const eIsPm = e.hour >= 12;
 
   const fmtClock = (h: number, m: number): string => {
     const h12 = h % 12 === 0 ? 12 : h % 12;
@@ -99,9 +98,9 @@ export function longTimeRange(startMs: number, endMs: number): string {
   };
   const sAmPm = sIsPm ? 'pm' : 'am';
   const eAmPm = eIsPm ? 'pm' : 'am';
-  const startStr = sIsPm === eIsPm ? fmtClock(sH, sM) : `${fmtClock(sH, sM)}${sAmPm}`;
-  const endStr = `${fmtClock(eH, eM)}${eAmPm}`;
-  return `${startStr} — ${endStr}`;
+  const startStr = sIsPm === eIsPm ? fmtClock(s.hour, s.minute) : `${fmtClock(s.hour, s.minute)}${sAmPm}`;
+  const endStr = `${fmtClock(e.hour, e.minute)}${eAmPm}`;
+  return `${startStr} — ${endStr} PT`;
 }
 
 export function venueName(
@@ -128,11 +127,11 @@ export function relativeTime(ms: number, now: number = Date.now()): string {
   if (mins < 60) return `${mins}m ago`;
   const hrs = Math.round(mins / 60);
   if (hrs < 24) return `${hrs}h ago`;
-  const d = new Date(ms);
-  return d.toLocaleString(undefined, {
+  return new Date(ms).toLocaleString('en-US', {
     weekday: 'short',
     hour: 'numeric',
     minute: '2-digit',
+    timeZone: DISPLAY_TZ,
   });
 }
 
