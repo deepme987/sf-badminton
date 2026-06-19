@@ -97,6 +97,12 @@ body {
    * with svh as a fallback for older browsers via stacked declarations. */
   min-height: 100svh;
   min-height: 100dvh;
+  /* Suppress iOS PWA rubber-band overscroll at the top of the page. Without
+   * this, scrolling past the top bounces the entire layout — including
+   * `position: fixed` children like the BottomBar — which reads as
+   * "the CTA is not sticky." `contain` keeps any internal scroll
+   * containers bouncy while blocking the chain to the browser viewport. */
+  overscroll-behavior-y: contain;
 }
 
 /* Tabular-nums helper. */

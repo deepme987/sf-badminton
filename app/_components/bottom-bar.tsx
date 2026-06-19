@@ -27,7 +27,15 @@ export function BottomBar({ children }: BottomBarProps) {
     <div
       data-bottom-bar=""
       className="fixed inset-x-0 bottom-0 z-30 md:hidden bg-surface border-t border-rule"
-      style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)' }}
+      style={{
+        paddingBottom: 'calc(env(safe-area-inset-bottom) + 12px)',
+        // Promote the bar to its own compositing layer so iOS keeps it
+        // pinned during scroll-momentum and rubber-band recovery instead
+        // of repainting it on the main scroll layer (which is what made
+        // it appear to "scroll with" the page).
+        transform: 'translateZ(0)',
+        willChange: 'transform',
+      }}
     >
       <div className="max-w-4xl mx-auto px-4 pt-3 flex items-center gap-2">{children}</div>
     </div>
